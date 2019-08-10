@@ -120,7 +120,11 @@ ArenaImpl::Block* ArenaImpl::NewBlock(Block* last_block, size_t min_bytes) {
 
   void* mem = options_.block_alloc(size);
   Block* b = new (mem) Block(size, last_block);
+#ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
   space_allocated_.fetch_add(size, std::memory_order_relaxed);
+#else
+  space_allocated_.store(space_allocated_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+#endif
   return b;
 }
 
@@ -379,10 +383,15 @@ ArenaImpl::SerialArena* ArenaImpl::GetSerialArenaFallback(void* me) {
     serial = SerialArena::New(b, me, this);
 
     SerialArena* head = threads_.load(std::memory_order_relaxed);
+#ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
     do {
       serial->set_next(head);
     } while (!threads_.compare_exchange_weak(
         head, serial, std::memory_order_release, std::memory_order_relaxed));
+#else
+    serial->set_next(head);
+    threads_.store(serial, std::memory_order_release);
+#endif
   }
 
   CacheSerialArena(serial);

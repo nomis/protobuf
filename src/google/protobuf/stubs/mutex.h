@@ -96,18 +96,28 @@ class PROTOBUF_EXPORT CriticalSectionLock {
 class PROTOBUF_EXPORT GOOGLE_PROTOBUF_CAPABILITY("mutex") WrappedMutex {
  public:
   WrappedMutex() = default;
-  void Lock() GOOGLE_PROTOBUF_ACQUIRE() { mu_.lock(); }
-  void Unlock() GOOGLE_PROTOBUF_RELEASE() { mu_.unlock(); }
+  void Lock() GOOGLE_PROTOBUF_ACQUIRE() {
+#ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
+    mu_.lock();
+#endif
+  }
+  void Unlock() GOOGLE_PROTOBUF_RELEASE() {
+#ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
+    mu_.unlock();
+#endif
+  }
   // Crash if this Mutex is not held exclusively by this thread.
   // May fail to crash when it should; will never crash when it should not.
   void AssertHeld() const {}
 
  private:
-#ifndef GOOGLE_PROTOBUF_SUPPORT_WINDOWS_XP
+#ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
+# ifndef GOOGLE_PROTOBUF_SUPPORT_WINDOWS_XP
   std::mutex mu_;
-#else  // ifndef GOOGLE_PROTOBUF_SUPPORT_WINDOWS_XP
+# else  // ifndef GOOGLE_PROTOBUF_SUPPORT_WINDOWS_XP
   CriticalSectionLock mu_;
-#endif  // #ifndef GOOGLE_PROTOBUF_SUPPORT_WINDOWS_XP
+# endif  // #ifndef GOOGLE_PROTOBUF_SUPPORT_WINDOWS_XP
+#endif // ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
 };
 
 using Mutex = WrappedMutex;
@@ -115,10 +125,17 @@ using Mutex = WrappedMutex;
 // MutexLock(mu) acquires mu when constructed and releases it when destroyed.
 class PROTOBUF_EXPORT MutexLock {
  public:
+#ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
   explicit MutexLock(Mutex *mu) : mu_(mu) { this->mu_->Lock(); }
   ~MutexLock() { this->mu_->Unlock(); }
+#else
+  explicit MutexLock(Mutex *mu __attribute__((unused))) {};
+  ~MutexLock() = default;
+#endif
  private:
+#ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
   Mutex *const mu_;
+#endif
   GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(MutexLock);
 };
 
@@ -129,11 +146,18 @@ typedef MutexLock WriterMutexLock;
 // MutexLockMaybe is like MutexLock, but is a no-op when mu is nullptr.
 class PROTOBUF_EXPORT MutexLockMaybe {
  public:
+#ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
   explicit MutexLockMaybe(Mutex *mu) :
     mu_(mu) { if (this->mu_ != nullptr) { this->mu_->Lock(); } }
   ~MutexLockMaybe() { if (this->mu_ != nullptr) { this->mu_->Unlock(); } }
+#else
+  explicit MutexLockMaybe(Mutex *mu __attribute__((unused))) {};
+  ~MutexLockMaybe() = default;
+#endif
  private:
+#ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
   Mutex *const mu_;
+#endif
   GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(MutexLockMaybe);
 };
 

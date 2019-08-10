@@ -798,20 +798,28 @@ void InitSCCImpl(SCCInfoBase* scc) {
   static WrappedMutex mu{GOOGLE_PROTOBUF_LINKER_INITIALIZED};
   // Either the default in case no initialization is running or the id of the
   // thread that is currently initializing.
-#ifndef GOOGLE_PROTOBUF_SUPPORT_WINDOWS_XP
+#ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
+# ifndef GOOGLE_PROTOBUF_SUPPORT_WINDOWS_XP
   static std::atomic<std::thread::id> runner;
   auto me = std::this_thread::get_id();
-#else
+# else
   // This is a lightweight replacement for std::thread::id. std::thread does not
   // work on Windows XP SP2 with the latest VC++ libraries, because it utilizes
   // the Concurrency Runtime that is only supported on Windows XP SP3 and above.
   static std::atomic_llong runner(-1);
   auto me = ::GetCurrentThreadId();
-#endif  // #ifndef GOOGLE_PROTOBUF_SUPPORT_WINDOWS_XP
+# endif  // #ifndef GOOGLE_PROTOBUF_SUPPORT_WINDOWS_XP
+#else
+  static std::atomic_bool runner(false);
+#endif // ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
 
   // This will only happen because the constructor will call InitSCC while
   // constructing the default instance.
+#ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
   if (runner.load(std::memory_order_relaxed) == me) {
+#else
+  if (runner.load(std::memory_order_relaxed)) {
+#endif
     // Because we're in the process of constructing the default instance.
     // We can be assured that we're already exploring this SCC.
     GOOGLE_CHECK_EQ(scc->visit_status.load(std::memory_order_relaxed),
@@ -820,14 +828,22 @@ void InitSCCImpl(SCCInfoBase* scc) {
   }
   InitProtobufDefaults();
   mu.Lock();
+#ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
   runner.store(me, std::memory_order_relaxed);
+#else
+  runner.store(true, std::memory_order_relaxed);
+#endif
   InitSCC_DFS(scc);
 
-#ifndef GOOGLE_PROTOBUF_SUPPORT_WINDOWS_XP
+#ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
+# ifndef GOOGLE_PROTOBUF_SUPPORT_WINDOWS_XP
   runner.store(std::thread::id{}, std::memory_order_relaxed);
-#else
+# else
   runner.store(-1, std::memory_order_relaxed);
-#endif  // #ifndef GOOGLE_PROTOBUF_SUPPORT_WINDOWS_XP
+# endif  // #ifndef GOOGLE_PROTOBUF_SUPPORT_WINDOWS_XP
+#else
+  runner.store(false, std::memory_order_relaxed);
+#endif // ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
 
   mu.Unlock();
 }

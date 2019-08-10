@@ -38,6 +38,8 @@
 #include <stdio.h>
 #include <vector>
 
+#ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
+
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN  // We only need minimal includes
 #include <windows.h>
@@ -50,6 +52,8 @@
 #if defined(__ANDROID__)
 #include <android/log.h>
 #endif
+
+#endif // ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
 
 #include <google/protobuf/stubs/callback.h>
 #include <google/protobuf/stubs/logging.h>
@@ -184,29 +188,39 @@ static LogHandler* log_handler_ = &DefaultLogHandler;
 static std::atomic<int> log_silencer_count_ = ATOMIC_VAR_INIT(0);
 
 LogMessage& LogMessage::operator<<(const string& value) {
+#ifndef GOOGLE_PROTOBUF_NO_LOGGING
   message_ += value;
+#endif
   return *this;
 }
 
 LogMessage& LogMessage::operator<<(const char* value) {
+#ifndef GOOGLE_PROTOBUF_NO_LOGGING
   message_ += value;
+#endif
   return *this;
 }
 
 LogMessage& LogMessage::operator<<(const StringPiece& value) {
+#ifndef GOOGLE_PROTOBUF_NO_LOGGING
   message_ += value.ToString();
+#endif
   return *this;
 }
 
 LogMessage& LogMessage::operator<<(const util::Status& status) {
+#ifndef GOOGLE_PROTOBUF_NO_LOGGING
   message_ += status.ToString();
+#endif
   return *this;
 }
 
 LogMessage& LogMessage::operator<<(const uint128& value) {
+#ifndef GOOGLE_PROTOBUF_NO_LOGGING
   std::ostringstream str;
   str << value;
   message_ += str.str();
+#endif
   return *this;
 }
 
@@ -214,7 +228,13 @@ LogMessage& LogMessage::operator<<(const uint128& value) {
 // the results -- in fact, we probably prefer that.  So we use snprintf()
 // instead of Simple*toa().
 #undef DECLARE_STREAM_OPERATOR
-#define DECLARE_STREAM_OPERATOR(TYPE, FORMAT)                       \
+#ifdef GOOGLE_PROTOBUF_NO_LOGGING
+# define DECLARE_STREAM_OPERATOR(TYPE, FORMAT)                      \
+  LogMessage& LogMessage::operator<<(TYPE value) {                  \
+    return *this;                                                   \
+  }
+#else
+# define DECLARE_STREAM_OPERATOR(TYPE, FORMAT)                      \
   LogMessage& LogMessage::operator<<(TYPE value) {                  \
     /* 128 bytes should be big enough for any of the primitive */   \
     /* values which we print with this, but well use snprintf() */  \
@@ -226,6 +246,7 @@ LogMessage& LogMessage::operator<<(const uint128& value) {
     message_ += buffer;                                             \
     return *this;                                                   \
   }
+#endif
 
 DECLARE_STREAM_OPERATOR(char         , "%c" )
 DECLARE_STREAM_OPERATOR(int          , "%d" )
@@ -243,6 +264,7 @@ LogMessage::LogMessage(LogLevel level, const char* filename, int line)
 LogMessage::~LogMessage() {}
 
 void LogMessage::Finish() {
+#ifndef GOOGLE_PROTOBUF_NO_LOGGING
   bool suppress = false;
 
   if (level_ != LOGLEVEL_FATAL) {
@@ -252,6 +274,7 @@ void LogMessage::Finish() {
   if (!suppress) {
     log_handler_(level_, filename_, line_, message_);
   }
+#endif
 
   if (level_ == LOGLEVEL_FATAL) {
 #if PROTOBUF_USE_EXCEPTIONS
@@ -269,6 +292,7 @@ void LogFinisher::operator=(LogMessage& other) {
 }  // namespace internal
 
 LogHandler* SetLogHandler(LogHandler* new_func) {
+#ifndef GOOGLE_PROTOBUF_NO_LOGGING
   LogHandler* old = internal::log_handler_;
   if (old == &internal::NullLogHandler) {
     old = nullptr;
@@ -279,6 +303,9 @@ LogHandler* SetLogHandler(LogHandler* new_func) {
     internal::log_handler_ = new_func;
   }
   return old;
+#else
+  return nullptr;
+#endif
 }
 
 LogSilencer::LogSilencer() {

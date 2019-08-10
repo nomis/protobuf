@@ -1,0 +1,45 @@
+{
+	"name": "uuid-protobuf",
+	"description": "Google Protocol Buffers library (single-threaded with MessageLite only)",
+	"keywords": "protobuf",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/nomis/mcu-uuid-protobuf.git"
+	},
+	"version": "3.9.1-arduino-0",
+	"license": "BSD-3-Clause",
+	"build": {
+		"flags": "-std=c++11 -Os -flto -Wno-sign-compare -Wno-unused-parameter -Wno-maybe-uninitialized -DGOOGLE_PROTOBUF_SINGLE_THREADED -DGOOGLE_PROTOBUF_NO_LOGGING",
+		"unflags": "-fno-rtti",
+		"srcDir": "src",
+		"srcFilter": [
+			"+<google/protobuf/any_lite.cc>",
+			"+<google/protobuf/arena.cc>",
+			"+<google/protobuf/extension_set.cc>",
+			"+<google/protobuf/generated_enum_util.cc>",
+			"+<google/protobuf/generated_message_table_driven_lite.cc>",
+			"+<google/protobuf/generated_message_util.cc>",
+			"+<google/protobuf/implicit_weak_message.cc>",
+			"+<google/protobuf/io/coded_stream.cc>",
+			"+<google/protobuf/io/io_win32.cc>",
+			"+<google/protobuf/io/strtod.cc>",
+			"+<google/protobuf/io/zero_copy_stream.cc>",
+			"+<google/protobuf/io/zero_copy_stream_impl.cc>",
+			"+<google/protobuf/io/zero_copy_stream_impl_lite.cc>",
+			"+<google/protobuf/message_lite.cc>",
+			"+<google/protobuf/parse_context.cc>",
+			"+<google/protobuf/repeated_field.cc>",
+			"+<google/protobuf/stubs/bytestream.cc>",
+			"+<google/protobuf/stubs/common.cc>",
+			"+<google/protobuf/stubs/int128.cc>",
+			"+<google/protobuf/stubs/status.cc>",
+			"+<google/protobuf/stubs/statusor.cc>",
+			"+<google/protobuf/stubs/stringpiece.cc>",
+			"+<google/protobuf/stubs/stringprintf.cc>",
+			"+<google/protobuf/stubs/structurally_valid.cc>",
+			"+<google/protobuf/stubs/strutil.cc>",
+			"+<google/protobuf/stubs/time.cc>",
+			"+<google/protobuf/wire_format_lite.cc>"
+		]
+	}
+}

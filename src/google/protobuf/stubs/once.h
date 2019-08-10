@@ -40,11 +40,30 @@ namespace google {
 namespace protobuf {
 namespace internal {
 
+#ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
 using once_flag = std::once_flag;
 template <typename... Args>
 void call_once(Args&&... args ) {
   std::call_once(std::forward<Args>(args)...);
 }
+#else
+class PROTOBUF_EXPORT once_flag {
+public:
+  constexpr once_flag() noexcept = default;
+
+  template<typename _Callable, typename... _Args>
+    friend void
+    call_once(once_flag& __once, _Callable&& __f, _Args&&... __args);
+
+private:
+  GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(once_flag);
+};
+
+template <typename Callable, typename... Args>
+void call_once(Callable&& f, Args&&... args) {
+  f(args...);
+}
+#endif // ifndef GOOGLE_PROTOBUF_SINGLE_THREADED
 
 }  // namespace internal
 }  // namespace protobuf

@@ -32,7 +32,8 @@
 //  Based on original Protocol Buffers design by
 //  Sanjay Ghemawat, Jeff Dean, and others.
 
-#include <iostream>
+#include <istream>
+#include <ostream>
 #include <stack>
 #include <unordered_map>
 
